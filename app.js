@@ -246,7 +246,7 @@ async function setupCamera() {
     }
 }
 
-// Detect person outline using edge detection
+// Detect hand using skin tone detection and edge detection
 let sensitivity = 50;
 
 function detectOutline() {
@@ -255,30 +255,97 @@ function detectOutline() {
     const imageData = hiddenCtx.getImageData(0, 0, WIDTH, HEIGHT);
     const data = imageData.data;
 
-    // Simple edge detection - find pixels with significant brightness changes
-    const outlinePoints = [];
+    // Skin tone detection - find hand region
+    const handPixels = [];
     const step = 4; // Sample every 4th pixel for performance
 
     for (let y = step; y < HEIGHT - step; y += step) {
         for (let x = step; x < WIDTH - step; x += step) {
             const idx = (y * WIDTH + x) * 4;
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
 
-            // Get current pixel brightness
-            const current = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-
-            // Get neighboring pixels
-            const right = (data[idx + step * 4] + data[idx + step * 4 + 1] + data[idx + step * 4 + 2]) / 3;
-            const bottom = (data[idx + WIDTH * step * 4] + data[idx + WIDTH * step * 4 + 1] + data[idx + WIDTH * step * 4 + 2]) / 3;
-
-            // Check if there's a significant change (edge)
-            const threshold = sensitivity;
-            if (Math.abs(current - right) > threshold || Math.abs(current - bottom) > threshold) {
-                outlinePoints.push({ x, y });
+            // Skin tone detection (works for various skin tones)
+            // Check if pixel falls within skin tone range
+            if (isSkinTone(r, g, b)) {
+                handPixels.push({ x, y, brightness: (r + g + b) / 3 });
             }
         }
     }
 
+    // Find hand outline from skin tone pixels using edge detection
+    const outlinePoints = [];
+
+    for (let i = 0; i < handPixels.length; i++) {
+        const pixel = handPixels[i];
+        const x = pixel.x;
+        const y = pixel.y;
+
+        // Check if this pixel is on the edge (has non-skin neighbors)
+        const idx = (y * WIDTH + x) * 4;
+        let isEdge = false;
+
+        // Check surrounding pixels
+        for (let dy = -step; dy <= step; dy += step) {
+            for (let dx = -step; dx <= step; dx += step) {
+                if (dx === 0 && dy === 0) continue;
+
+                const nx = x + dx;
+                const ny = y + dy;
+
+                if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT) {
+                    const nIdx = (ny * WIDTH + nx) * 4;
+                    const nr = data[nIdx];
+                    const ng = data[nIdx + 1];
+                    const nb = data[nIdx + 2];
+
+                    if (!isSkinTone(nr, ng, nb)) {
+                        isEdge = true;
+                        break;
+                    }
+                }
+            }
+            if (isEdge) break;
+        }
+
+        if (isEdge) {
+            outlinePoints.push({ x, y });
+        }
+    }
+
     return outlinePoints;
+}
+
+// Detect skin tone (optimized for hand detection)
+function isSkinTone(r, g, b) {
+    // Multiple skin tone detection methods for better accuracy
+
+    // Method 1: RGB thresholds (covers wide range of skin tones)
+    const rgbCheck = r > 95 && g > 40 && b > 20 &&
+                     r > g && r > b &&
+                     Math.abs(r - g) > 15;
+
+    // Method 2: Normalized RGB
+    const sum = r + g + b;
+    if (sum === 0) return false;
+
+    const nr = r / sum;
+    const ng = g / sum;
+
+    const normalizedCheck = nr > 0.36 && nr < 0.465 &&
+                           ng > 0.28 && ng < 0.363;
+
+    // Method 3: YCbCr color space approximation
+    const y = 0.299 * r + 0.587 * g + 0.114 * b;
+    const cb = -0.169 * r - 0.331 * g + 0.5 * b + 128;
+    const cr = 0.5 * r - 0.419 * g - 0.081 * b + 128;
+
+    const ycbcrCheck = y > 80 &&
+                      cb >= 77 && cb <= 127 &&
+                      cr >= 133 && cr <= 173;
+
+    return rgbCheck || normalizedCheck || ycbcrCheck;
 }
 
 // Map dots to outline points
@@ -356,7 +423,7 @@ document.getElementById('startBtn').addEventListener('click', async () => {
         initDots();
         initAudio();
 
-        document.getElementById('status').textContent = 'Running - Move in front of the camera!';
+        document.getElementById('status').textContent = 'Running - Show your hand to the camera!';
         document.getElementById('startBtn').disabled = true;
         document.getElementById('pauseBtn').disabled = false;
 
