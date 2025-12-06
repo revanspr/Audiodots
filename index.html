@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audiodots - Camera Outline Sound</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <video id="video" autoplay playsinline></video>
+        <canvas id="hiddenCanvas"></canvas>
+        <canvas id="displayCanvas"></canvas>
+
+        <div class="controls">
+            <button id="startBtn">Start Camera & Audio</button>
+            <button id="pauseBtn" disabled>Pause Audio</button>
+            <div class="slider-group">
+                <label for="volumeSlider">Volume: <span id="volumeValue">30</span>%</label>
+                <input type="range" id="volumeSlider" min="0" max="100" value="30">
+            </div>
+            <div class="slider-group">
+                <label for="sensitivitySlider">Sensitivity: <span id="sensitivityValue">50</span></label>
+                <input type="range" id="sensitivitySlider" min="10" max="100" value="50">
+            </div>
+        </div>
+
+        <div class="info">
+            <p id="status">Click "Start Camera & Audio" to begin</p>
+            <p>Dots: <span id="dotCount">230</span> | Connections: <span id="connectionCount">0</span> | Active Sounds: <span id="soundCount">0</span></p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
