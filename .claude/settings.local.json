@@ -5,7 +5,11 @@
       "Bash(git init:*)",
       "Bash(git remote add:*)",
       "Bash(git add:*)",
-      "Bash(start index.html)"
+      "Bash(start index.html)",
+      "Bash(ping:*)",
+      "Bash(git config:*)",
+      "Bash(set GIT_CURL_VERBOSE=1:*)",
+      "Bash(git ls-remote:*)"
     ],
     "deny": [],
     "ask": []
