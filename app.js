@@ -246,7 +246,7 @@ async function setupCamera() {
     }
 }
 
-// Detect hand using skin tone detection and edge detection
+// Detect hand using skin tone detection
 let sensitivity = 50;
 
 function detectOutline() {
@@ -255,9 +255,9 @@ function detectOutline() {
     const imageData = hiddenCtx.getImageData(0, 0, WIDTH, HEIGHT);
     const data = imageData.data;
 
-    // Skin tone detection - find hand region
+    // Skin tone detection - find all hand pixels (not just outline)
     const handPixels = [];
-    const step = 4; // Sample every 4th pixel for performance
+    const step = 3; // Sample every 3rd pixel for better coverage
 
     for (let y = step; y < HEIGHT - step; y += step) {
         for (let x = step; x < WIDTH - step; x += step) {
@@ -269,52 +269,13 @@ function detectOutline() {
             // Skin tone detection (works for various skin tones)
             // Check if pixel falls within skin tone range
             if (isSkinTone(r, g, b)) {
-                handPixels.push({ x, y, brightness: (r + g + b) / 3 });
+                handPixels.push({ x, y });
             }
         }
     }
 
-    // Find hand outline from skin tone pixels using edge detection
-    const outlinePoints = [];
-
-    for (let i = 0; i < handPixels.length; i++) {
-        const pixel = handPixels[i];
-        const x = pixel.x;
-        const y = pixel.y;
-
-        // Check if this pixel is on the edge (has non-skin neighbors)
-        const idx = (y * WIDTH + x) * 4;
-        let isEdge = false;
-
-        // Check surrounding pixels
-        for (let dy = -step; dy <= step; dy += step) {
-            for (let dx = -step; dx <= step; dx += step) {
-                if (dx === 0 && dy === 0) continue;
-
-                const nx = x + dx;
-                const ny = y + dy;
-
-                if (nx >= 0 && nx < WIDTH && ny >= 0 && ny < HEIGHT) {
-                    const nIdx = (ny * WIDTH + nx) * 4;
-                    const nr = data[nIdx];
-                    const ng = data[nIdx + 1];
-                    const nb = data[nIdx + 2];
-
-                    if (!isSkinTone(nr, ng, nb)) {
-                        isEdge = true;
-                        break;
-                    }
-                }
-            }
-            if (isEdge) break;
-        }
-
-        if (isEdge) {
-            outlinePoints.push({ x, y });
-        }
-    }
-
-    return outlinePoints;
+    // Return all hand pixels to fill the entire hand shape
+    return handPixels;
 }
 
 // Detect skin tone (optimized for hand detection)
